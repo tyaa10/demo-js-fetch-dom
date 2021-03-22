@@ -14,6 +14,19 @@
 <body>
   <a href="https://jsonplaceholder.typicode.com/todos">Fetch TODOs Sync</a>
   <section>
+    <form id='add-item__todo-form'>
+      <div>
+        <input type="text" id='add-item__todo-form__title' placeholder="title">
+      </div>
+      <div>
+        <textarea id='add-item__todo-form__description' placeholder="description"></textarea>
+      </div>
+      <div>
+        <input type="submit" value="Submit">
+      </div>
+    </form>
+  </section>
+  <section>
     <h2>Fetch TODOs Async</h2>
     <div>
       <button id='async__fetch-button'>Fetch</button>
@@ -35,6 +48,10 @@
         ev.preventDefault()
         const waitSpan = document.getElementById('async__wait-span')
         waitSpan.style.display = 'inline'
+        /* TODO
+          Заменить обращением к локальному API (http://localhost:4000/api/items)
+          и расширить / скорректировать визуализацию полученных данных на веб-странице
+        */
         fetch('https://jsonplaceholder.typicode.com/todos')
           .then((response) => response.json())
           .then((responseBody) => {
@@ -52,6 +69,36 @@
               todoDiv.append(todoH3)
               resultsDiv.append(todoDiv)
             })
+          })
+          .catch((reason) => console.log(reason))
+          .finally(() => waitSpan.style.display = 'none')
+      })
+
+      document.getElementById('add-item__todo-form')
+      .addEventListener('submit', (ev) => {
+        ev.preventDefault()
+        const requestData = {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            'title': document.getElementById('add-item__todo-form__title').value,
+            'description': document.getElementById('add-item__todo-form__description').value,
+            'date': new Date()
+          })
+        }
+        // объект запроса
+        const request = new Request('http://localhost:4000/api/items', requestData)
+        // console.log('requestData', requestData)
+        // console.log('request', request)
+        fetch(request)
+          .then((response) => response.json())
+          .then((responseBody) => {
+            // TODO вынести в отдельную функцию код запроса к API,
+            // который получает список,
+            // и вызвать ее здесь и выше - в обработчике клика по кнопке Submit
           })
           .catch((reason) => console.log(reason))
           .finally(() => waitSpan.style.display = 'none')
