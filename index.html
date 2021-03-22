@@ -42,6 +42,11 @@
             resultsDiv.innerText = ''
             responseBody.forEach(todoModel => {
               const todoDiv = document.createElement('div')
+              if (todoModel.completed) {
+                todoDiv.style.backgroundColor = '#cfc'
+              } else {
+                todoDiv.style.backgroundColor = '#fcc'
+              }
               const todoH3 = document.createElement('h3')
               todoH3.innerText = todoModel.title
               todoDiv.append(todoH3)
