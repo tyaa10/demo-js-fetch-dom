@@ -5,15 +5,23 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+  <style>
+    #async__wait-span {
+      display: none
+    }
+  </style>
 </head>
 <body>
   <a href="https://jsonplaceholder.typicode.com/todos">Fetch TODOs Sync</a>
   <section>
     <h2>Fetch TODOs Async</h2>
     <div>
+      <button id='async__fetch-button'>Fetch</button>
+      <span id='async__wait-span'>Wait...</span>
+    </div>
+    <div id='async__results-div'>
 
     </div>
-    <button id='async__fetch-button'>Fetch</button>
   </section>
   <script>
     // Fetch TODOs Async
@@ -25,9 +33,23 @@
         // предотвращение перезагрузки страницы с отправкой формы
         // в случае, если кнопка расположена внутри формы
         ev.preventDefault()
+        const waitSpan = document.getElementById('async__wait-span')
+        waitSpan.style.display = 'inline'
         fetch('https://jsonplaceholder.typicode.com/todos')
           .then((response) => response.json())
-          .then((responseBody) => console.log(responseBody))
+          .then((responseBody) => {
+            const resultsDiv = document.getElementById('async__results-div')
+            resultsDiv.innerText = ''
+            responseBody.forEach(todoModel => {
+              const todoDiv = document.createElement('div')
+              const todoH3 = document.createElement('h3')
+              todoH3.innerText = todoModel.title
+              todoDiv.append(todoH3)
+              resultsDiv.append(todoDiv)
+            })
+          })
+          .catch((reason) => console.log(reason))
+          .finally(() => waitSpan.style.display = 'none')
       })
   </script>
 </body>
