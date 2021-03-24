@@ -9,6 +9,18 @@
     #async__wait-span {
       display: none
     }
+    #async__results-div > div {
+      padding: 5px;
+      margin: 5px;
+      max-width: 25%;
+      position: relative;
+    }
+    #async__results-div__item__delete-button {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background-color: transparent;
+    }
   </style>
 </head>
 <body>
@@ -16,10 +28,10 @@
   <section>
     <form id='add-item__todo-form'>
       <div>
-        <input type="text" id='add-item__todo-form__title' placeholder="title">
+        <input type="text" id='add-item__todo-form__title' placeholder="title" pattern="^[\d\w]{1,16}$">
       </div>
       <div>
-        <textarea id='add-item__todo-form__description' placeholder="description"></textarea>
+        <textarea id='add-item__todo-form__description' placeholder="description" required></textarea>
       </div>
       <div>
         <input type="submit" value="Submit">
@@ -41,67 +53,122 @@
     /* fetch('https://jsonplaceholder.typicode.com/todos')
       .then((response) => response.json())
       .then((responseBody) => console.log(responseBody)) */
+    function toggleWait (show) {
+      const waitSpan = document.getElementById('async__wait-span')
+      if (show) {
+        waitSpan.style.display = 'inline'
+      } else {
+        waitSpan.style.display = 'none'
+      }
+    }
+    function fetchItems () {
+      toggleWait(true)
+      fetch('http://localhost:4000/api/items')
+        .then((response) => response.json())
+        .then((responseBody) => {
+          const resultsDiv = document.getElementById('async__results-div')
+          resultsDiv.innerText = ''
+          responseBody.data.forEach(todoModel => {
+            const todoDiv = document.createElement('div')
+            if (todoModel.done) {
+              todoDiv.style.backgroundColor = '#cfc'
+            } else {
+              todoDiv.style.backgroundColor = '#fcc'
+            }
+            todoDiv.addEventListener('click', (ev) => {
+              document.getElementById('add-item__todo-form__title').value = todoModel.title
+              document.getElementById('add-item__todo-form__description').value = todoModel.description
+              window.selectedItemId = todoModel.id
+            })
+            const todoH3 = document.createElement('h3')
+            const todoP = document.createElement('p')
+            const todoSpan = document.createElement('span')
+            const todoDeleteButton = document.createElement('button')
+            todoH3.innerText = todoModel.title
+            todoP.innerText = todoModel.description
+            todoSpan.innerText = new Date(todoModel.date).toLocaleDateString('ru')
+            todoDeleteButton.innerText = 'X'
+            todoDeleteButton.id = 'async__results-div__item__delete-button'
+            todoDeleteButton.addEventListener('click', (ev) => {
+              if (confirm('This item will be deleted. Continue?')) {
+                toggleWait(true)
+                fetch(`http://localhost:4000/api/items/${todoModel.id}`, {
+                  method: 'DELETE'
+                }).then((response) => response.status === 204 ? fetchItems() : '')
+                .catch((reason) => console.log(reason))
+                .finally(() => toggleWait(false))
+              }
+            })
+            todoDiv.append(todoH3)
+            todoDiv.append(todoP)
+            todoDiv.append(todoSpan)
+            todoDiv.append(todoDeleteButton)
+            resultsDiv.append(todoDiv)
+          })
+        })
+        .catch((reason) => console.log(reason))
+        .finally(() => toggleWait(false))
+    }
     document.getElementById('async__fetch-button')
       .addEventListener('click', (ev) => {
         // предотвращение перезагрузки страницы с отправкой формы
         // в случае, если кнопка расположена внутри формы
         ev.preventDefault()
-        const waitSpan = document.getElementById('async__wait-span')
-        waitSpan.style.display = 'inline'
-        /* TODO
-          Заменить обращением к локальному API (http://localhost:4000/api/items)
-          и расширить / скорректировать визуализацию полученных данных на веб-странице
-        */
-        fetch('https://jsonplaceholder.typicode.com/todos')
-          .then((response) => response.json())
-          .then((responseBody) => {
-            const resultsDiv = document.getElementById('async__results-div')
-            resultsDiv.innerText = ''
-            responseBody.forEach(todoModel => {
-              const todoDiv = document.createElement('div')
-              if (todoModel.completed) {
-                todoDiv.style.backgroundColor = '#cfc'
-              } else {
-                todoDiv.style.backgroundColor = '#fcc'
-              }
-              const todoH3 = document.createElement('h3')
-              todoH3.innerText = todoModel.title
-              todoDiv.append(todoH3)
-              resultsDiv.append(todoDiv)
-            })
-          })
-          .catch((reason) => console.log(reason))
-          .finally(() => waitSpan.style.display = 'none')
+        fetchItems()
       })
 
       document.getElementById('add-item__todo-form')
       .addEventListener('submit', (ev) => {
         ev.preventDefault()
-        const requestData = {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            'title': document.getElementById('add-item__todo-form__title').value,
-            'description': document.getElementById('add-item__todo-form__description').value,
-            'date': new Date()
-          })
+        toggleWait(true)
+        if (!window.selectedItemId) {
+          const requestData = {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              'title': document.getElementById('add-item__todo-form__title').value,
+              'description': document.getElementById('add-item__todo-form__description').value,
+              'date': new Date() // TODO select date
+            })
+          }
+          // объект запроса
+          const request = new Request('http://localhost:4000/api/items', requestData)
+          // console.log('requestData', requestData)
+          // console.log('request', request)
+          fetch(request)
+            .then((response) => response.status === 201 ? fetchItems() : '')
+            .catch((reason) => console.log(reason))
+            .finally(() => toggleWait(false))
+        } else {
+          const requestData = {
+            method: 'PUT',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              'title': document.getElementById('add-item__todo-form__title').value,
+              'description': document.getElementById('add-item__todo-form__description').value,
+              'date': new Date(), // TODO select date
+              'done': false
+            })
+          }
+          // объект запроса
+          const request = new Request(`http://localhost:4000/api/items/${window.selectedItemId}`, requestData)
+          // console.log('requestData', requestData)
+          // console.log('request', request)
+          fetch(request)
+            .then((response) => response.status === 200 ? fetchItems() : '')
+            .catch((reason) => console.log(reason))
+            .finally(() => {
+              window.selectedItemId = null
+              toggleWait(false)
+            })
         }
-        // объект запроса
-        const request = new Request('http://localhost:4000/api/items', requestData)
-        // console.log('requestData', requestData)
-        // console.log('request', request)
-        fetch(request)
-          .then((response) => response.json())
-          .then((responseBody) => {
-            // TODO вынести в отдельную функцию код запроса к API,
-            // который получает список,
-            // и вызвать ее здесь и выше - в обработчике клика по кнопке Submit
-          })
-          .catch((reason) => console.log(reason))
-          .finally(() => waitSpan.style.display = 'none')
+        
       })
   </script>
 </body>
